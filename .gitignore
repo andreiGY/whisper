@@ -2,3 +2,4 @@ venv
 TODO.txt
 outputs/
 models/
+__pycache__/

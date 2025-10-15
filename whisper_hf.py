@@ -4,6 +4,7 @@ from datasets import load_dataset
 import pathlib
 import sys
 from datetime import datetime
+import gc
 
 AUDIO_FILE = "D:\\torrents\\ORWELL\\Orwell-skot1.mp3"
 
@@ -33,72 +34,93 @@ dtype_dic = {
     "xpu": torch.float16,
     "mps": torch.float32
 }
+
 #torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-device = choose_device()
-print(f"Device is {device}")
-torch_dtype = dtype_dic.get(device, torch.float32)
-print(f"torch_dtype is {torch_dtype}")
+# device = choose_device()
+# print(f"Device is {device}")
+# torch_dtype = dtype_dic.get(device, torch.float32)
+# print(f"torch_dtype is {torch_dtype}")
+def get_whisper_models():
+    whisper_models=[
+        {
+            "name": "openai/whisper-large-v3-turbo", "parameters": "809 M"
+        },
+        {
+            "name": "openai/whisper-large-v2", "parameters": "1550 M"
+        },
+        {
+            "name": "openai/whisper-medium", "parameters": "769 M"
+        },
+        {
+            "name": "openai/whisper-small", "parameters": "244 M"
+        },
+        {
+            "name": "openai/whisper-base", "parameters": "74 M"
+        },
+        {
+            "name": "openai/whisper-tiny", "parameters": "39 M"
+        },
+        {
+            "name": "distil-whisper/distil-large-v3", "parameters": "756 M"
+        }
+        ]
+    return whisper_models
 
-whisper_models=[
-    {
-        "name": "openai/whisper-large-v3-turbo", "parameters": "809 M"
-    },
-    {
-        "name": "openai/whisper-large-v2", "parameters": "1550 M"
-    },
-    {
-        "name": "openai/whisper-medium", "parameters": "769 M"
-    },
-    {
-        "name": "openai/whisper-small", "parameters": "244 M"
-    },
-    {
-        "name": "openai/whisper-base", "parameters": "74 M"
-    },
-    {
-        "name": "openai/whisper-tiny", "parameters": "39 M"
-    },
-    {
-        "name": "distil-whisper/distil-large-v3", "parameters": "756 M"
-    }
-    ]
+def transcribe(model_id, audio_file, device=None, torch_dtype=None):
+    
+    #model_id = "distil-whisper/distil-large-v3"
+    if device is None:
+        device = choose_device()
+        print(f"Device is {device}")
+    if torch_dtype is None:
+        torch_dtype = dtype_dic.get(device, torch.float32)
+        print(f"torch_dtype is {torch_dtype}")
 
-model_id = "distil-whisper/distil-large-v3"
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, cache_dir=MODELS_CACHE_DIR
+    )
+    model.to(device)
 
-model = AutoModelForSpeechSeq2Seq.from_pretrained(
-    model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, cache_dir=MODELS_CACHE_DIR
-)
-model.to(device)
+    processor = AutoProcessor.from_pretrained(model_id)
 
-processor = AutoProcessor.from_pretrained(model_id)
-
-pipe = pipeline(
-    "automatic-speech-recognition",
-    model=model,
-    tokenizer=processor.tokenizer,
-    feature_extractor=processor.feature_extractor,
-    chunk_length_s=30,
-    batch_size=16,  # batch size for inference - set based on your device
-    torch_dtype=torch_dtype,
-    device=device,
-)
-file_path = pathlib.Path(AUDIO_FILE)
-if not file_path.is_file():
-    print(f"{AUDIO_FILE} is not a file. Exiting...")
-    sys.exit(1)
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        chunk_length_s=30,
+        batch_size=16,  # batch size for inference - set based on your device
+        torch_dtype=torch_dtype,
+        device=device,
+    )
+    AUDIO_FILE = audio_file
+    file_path = pathlib.Path(AUDIO_FILE)
+    if not file_path.is_file():
+        print(f"{AUDIO_FILE} is not a file. Exiting...")
+        sys.exit(1)
 
 
-generate_kwargs = {"language": "russian", "return_timestamps": True}
-start_time = datetime.now()
+    generate_kwargs = {"language": "russian", "return_timestamps": True}
+    start_time = datetime.now()
 
-result = pipe(AUDIO_FILE, generate_kwargs=generate_kwargs) # sample
-out_text = result["text"]
-print(out_text)
+    result = pipe(AUDIO_FILE, generate_kwargs=generate_kwargs) # sample
+    out_text = result["text"]
+    #print(out_text)
 
-end_time = datetime.now()
-file_name = f"outputs/{pathlib.Path(AUDIO_FILE).stem}_{end_time.strftime('%Y%m%d%H%M%S')}"
-with open(file_name, 'w') as f:
-    f.write(out_text)
+    end_time = datetime.now()
+    file_name = f"outputs/{pathlib.Path(AUDIO_FILE).stem}_{end_time.strftime('%Y%m%d%H%M%S')}.txt"
+    with open(file_name, 'w') as f:
+        f.write(out_text)
 
-print(f"Processing file {AUDIO_FILE} took {end_time - start_time}. Result saved into file {file_name}")
+    print(f"Processing file {AUDIO_FILE} took {end_time - start_time}. Result saved into file {file_name}")
+    gc.collect()
+    
+
+if __name__ =="__main__":
+    model_id = "distil-whisper/distil-large-v3"
+    device = choose_device()
+    print(f"Device is {device}")
+    torch_dtype = dtype_dic.get(device, torch.float32)
+    print(f"torch_dtype is {torch_dtype}")
+    transcribe(model_id=model_id, audio_file=AUDIO_FILE, device=device, torch_dtype=torch_dtype )
