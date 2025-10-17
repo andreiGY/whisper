@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 import gc
 
-AUDIO_FILE = "D:\\torrents\\ORWELL\\Orwell-skot1.mp3"
+AUDIO_FILE = None
 
 MODELS_CACHE_DIR = "models/"
 
@@ -21,13 +21,13 @@ def choose_device():
     return device
 
 def get_devices():
-    devices = ["cpu"]
+    devices = []
     if torch.cuda.is_available(): devices.append("cuda:0")
     if torch.xpu.is_available(): devices.append("xpu")
     if torch.backends.mps.is_available(): devices.append("mps")
+    devices.append("cpu")
     return devices
 
-#device = "cuda:0" if torch.cuda.is_available() else "cpu"
 dtype_dic = {
     "cpu": torch.float32,
     "cuda:0": torch.float16,
@@ -35,12 +35,6 @@ dtype_dic = {
     "mps": torch.float32
 }
 
-#torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
-
-# device = choose_device()
-# print(f"Device is {device}")
-# torch_dtype = dtype_dic.get(device, torch.float32)
-# print(f"torch_dtype is {torch_dtype}")
 def get_whisper_models():
     whisper_models=[
         {
@@ -69,7 +63,6 @@ def get_whisper_models():
 
 def transcribe(model_id, audio_file, device=None, torch_dtype=None):
     
-    #model_id = "distil-whisper/distil-large-v3"
     if device is None:
         device = choose_device()
         print(f"Device is {device}")
@@ -101,23 +94,25 @@ def transcribe(model_id, audio_file, device=None, torch_dtype=None):
         sys.exit(1)
 
 
-    generate_kwargs = {"language": "russian", "return_timestamps": True}
+    generate_kwargs = {"return_timestamps": True}  # "language": "russian"
     start_time = datetime.now()
 
     result = pipe(AUDIO_FILE, generate_kwargs=generate_kwargs) # sample
     out_text = result["text"]
-    #print(out_text)
+    print(result)
 
     end_time = datetime.now()
     file_name = f"outputs/{pathlib.Path(AUDIO_FILE).stem}_{end_time.strftime('%Y%m%d%H%M%S')}.txt"
-    with open(file_name, 'w') as f:
+    with open(file_name, 'w', encoding='utf-8') as f:
         f.write(out_text)
 
     print(f"Processing file {AUDIO_FILE} took {end_time - start_time}. Result saved into file {file_name}")
     gc.collect()
+    return AUDIO_FILE, file_name, end_time
     
 
 if __name__ =="__main__":
+    AUDIO_FILE = "D:\\torrents\\ORWELL\\Orwell-skot1.mp3"
     model_id = "distil-whisper/distil-large-v3"
     device = choose_device()
     print(f"Device is {device}")

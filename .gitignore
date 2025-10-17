@@ -3,3 +3,4 @@ TODO.txt
 outputs/
 models/
 __pycache__/
+*.db
