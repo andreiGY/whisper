@@ -5,10 +5,14 @@ import pathlib
 import sys
 from datetime import datetime
 import gc
+import os
 
 AUDIO_FILE = None
 
+# directory for cached models of whisper
 MODELS_CACHE_DIR = "models/"
+# directory for transcribtion results (.txt files)
+OUTPUTS_DIR = "outputs/"
 
 def choose_device():
     device = "cpu"
@@ -70,6 +74,14 @@ def transcribe(model_id, audio_file, device=None, torch_dtype=None):
         torch_dtype = dtype_dic.get(device, torch.float32)
         print(f"torch_dtype is {torch_dtype}")
 
+    # create directory for cached models if it not exists
+    if not os.path.exists(MODELS_CACHE_DIR):
+        os.makedirs(MODELS_CACHE_DIR)
+
+    # create directory for output files if it not exists
+    if not os.path.exists(OUTPUTS_DIR):
+        os.makedirs(OUTPUTS_DIR)
+
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, cache_dir=MODELS_CACHE_DIR
     )
@@ -99,23 +111,18 @@ def transcribe(model_id, audio_file, device=None, torch_dtype=None):
 
     result = pipe(AUDIO_FILE, generate_kwargs=generate_kwargs) # sample
     out_text = result["text"]
-    print(result)
+    #print(result)
 
     end_time = datetime.now()
-    file_name = f"outputs/{pathlib.Path(AUDIO_FILE).stem}_{end_time.strftime('%Y%m%d%H%M%S')}.txt"
+    file_name = f"{OUTPUTS_DIR}{pathlib.Path(AUDIO_FILE).stem}_{end_time.strftime('%Y%m%d%H%M%S')}.txt"
     with open(file_name, 'w', encoding='utf-8') as f:
         f.write(out_text)
 
     print(f"Processing file {AUDIO_FILE} took {end_time - start_time}. Result saved into file {file_name}")
     gc.collect()
     return AUDIO_FILE, file_name, end_time
-    
 
-if __name__ =="__main__":
-    AUDIO_FILE = "D:\\torrents\\ORWELL\\Orwell-skot1.mp3"
-    model_id = "distil-whisper/distil-large-v3"
-    device = choose_device()
-    print(f"Device is {device}")
-    torch_dtype = dtype_dic.get(device, torch.float32)
-    print(f"torch_dtype is {torch_dtype}")
-    transcribe(model_id=model_id, audio_file=AUDIO_FILE, device=device, torch_dtype=torch_dtype )
+
+if __name__ == "__main__":
+    transcribe(sys.argv[1], sys.argv[2])
+    

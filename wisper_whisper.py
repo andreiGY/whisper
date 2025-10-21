@@ -1,15 +1,15 @@
 import whisper
 
 def split_audio_file(audio_file):
-
+    # splitting of long audio file should be implemented here
     return
 
-def transcribe_audio():
+def transcribe_audio(model, audio_file):
 
-    model = whisper.load_model("turbo")
+    model = whisper.load_model(model) # "turbo" for example
 
     # load audio and pad/trim it to fit 30 seconds
-    audio_file = whisper.load_audio("D:\\torrents\\ORWELL\\Orwell-skot1.mp3")
+    audio_file = whisper.load_audio(audio_file)
     split_audio_file(audio_file)
 
     audio = whisper.pad_or_trim(audio_file)

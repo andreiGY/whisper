@@ -1,7 +1,7 @@
 import customtkinter
 from CTkMessagebox import CTkMessagebox
 import CTkTable
-from whisper_hf import get_devices, get_whisper_models, transcribe
+from whisper_transformers import get_devices, get_whisper_models, transcribe
 from history import get_data, save_data
 import os
 import threading
