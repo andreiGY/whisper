@@ -5,3 +5,6 @@ models/
 __pycache__/
 *.db
 *_test.py
+build/
+dist/
+*.spec

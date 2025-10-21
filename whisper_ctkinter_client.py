@@ -10,13 +10,16 @@ import time
 AUDIO_FILE = None
 
 def get_data_view():
-    table_headers = ("Audio file", "Transcription file", "Date of transcription")
+    table_headers = ("Audio file", "Transcription file", "Date of transcription", "Whisper model", "Used device")
     hist_data = get_data()
     #print(hist_data)
     hist_data.insert(0, table_headers)
     #print(hist_data)
     return hist_data
 
+def refresh_hist_table(event=None):
+    hist_table.configure(values = get_data_view())
+    print("History table refreshed")
 
 def button_choose_file():
     print("button pressed")
@@ -31,11 +34,13 @@ def transcribition_run(label):
         CTkMessagebox(title="No audio file", message="Please, select audio file first.")
         return
     label.configure(text="Transcribing...")
-    audio_file_name, output_file_name, finished_time = transcribe(model_id=optionmenu_models.get(), audio_file=AUDIO_FILE, device=optionmenu_devices.get())
+    model_id=optionmenu_models.get()
+    device = optionmenu_devices.get()
+    audio_file_name, output_file_name, finished_time = transcribe(model_id=model_id, audio_file=AUDIO_FILE, device=optionmenu_devices.get())
     if output_file_name is not None:
         label.configure(text="Saving history...")
-        save_data(audio_file=audio_file_name, output_file=output_file_name, datetime=str(finished_time))
-        #hist_table.configure(values = get_data_view())
+        save_data(audio_file=audio_file_name, output_file=output_file_name, datetime=str(finished_time), model_name=model_id, device=device)
+        hist_table.configure(values = get_data_view())
     time.sleep(1) 
     label.configure(text="Transcribing finished")
     time.sleep(1)
@@ -49,7 +54,7 @@ def start_task(label):
 
 app = customtkinter.CTk()
 app.title("Whisper client application")
-app.geometry("1000x450")
+app.geometry("1050x450")
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("themes/breeze.json")
@@ -103,25 +108,27 @@ button_run = customtkinter.CTkButton(op_frame, text="Transcribe", corner_radius=
 button_run.grid(row=6, column=0, padx=20, pady=50, sticky="w")
 
 # frame for history list of transcriptions
-hist_frame = customtkinter.CTkScrollableFrame(master=app, width=650, height=400)
+hist_frame = customtkinter.CTkScrollableFrame(master=app, width=700, height=400)
 hist_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nw")
 #hist_frame.grid_propagate(False)
 
-hist_label = customtkinter.CTkLabel(hist_frame, text="Transcription history")
+hist_label = customtkinter.CTkLabel(hist_frame, text="Transcription history (click to refresh)")
+hist_label.bind("<Button-1>", command=refresh_hist_table)
 hist_label.grid(row=0, column=0, padx=20, pady=10)
-#таблица с историей транаскрибации
+#таблица с историей транскрибации
 def row_selected(selected):
     print(selected)
-    if selected['column'] != 2:
+    selected_column = selected['column']
+    if selected_column in [0,1]:
         print(f"command is: start {selected['value']}")
         os.system(f"start {selected['value']}")
+    if selected_column == 3:
+        os.system(f"start https://huggingface.co/{selected['value']}")
     return
 
 
 values = get_data_view()
-#    [ ["Audio file", "Transcription file", "Date of transcription"],
-#     ["1.mp3", "file_name1.txt", "2025-10-04 11:00:00"], ["2.ogg", "file_name2.txt", "2025-12-04 11:00:00"], ["3.wav", "file_name3.txt", "2025-10-05 11:00:00"]]
-hist_table = CTkTable.CTkTable(master=hist_frame, row=5, column=3, values=values, command=row_selected, wraplength=300, header_color="gray", hover_color="light steel blue")
+hist_table = CTkTable.CTkTable(master=hist_frame, row=5, column=5, values=values, command=row_selected, wraplength=300, header_color="gray", hover_color="light steel blue")
 hist_table.grid(row=1, column=0, padx=10, pady=10, sticky="nw")
 
 

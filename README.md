@@ -20,7 +20,7 @@
     ```
     pip install -r cuda.txt
     ```
-    3.2. if you have Intel GPU. Your device must be list id 1.1 Hardware [here](https://pytorch-extension.intel.com/installation?platform=gpu&version=v2.8.10%2Bxpu&os=windows&package=pip)
+    3.2. if you have Intel GPU. Your device must be listed in 1.1 Hardware [here](https://pytorch-extension.intel.com/installation?platform=gpu&version=v2.8.10%2Bxpu&os=windows&package=pip)
     ```
     pip install -r intel_gpu.txt
     ```
